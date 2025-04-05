@@ -1,7 +1,9 @@
 package com.example.project2;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -10,10 +12,15 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.firebase.auth.FirebaseAuth;
+
 public class Score extends AppCompatActivity {
     TextView tvScore, tvCorrect, tvWrong, tvGreating;
     int score,totalQuestions;
 
+    Button btn_playAgain, btn_logout;
+
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -24,12 +31,27 @@ public class Score extends AppCompatActivity {
         tvCorrect = findViewById(R.id.tv_correct);
         tvWrong = findViewById(R.id.tv_wrong);
         tvGreating = findViewById(R.id.tv_greating);
+        btn_playAgain = findViewById(R.id.playAgain);
+        btn_logout = findViewById(R.id.logout);
 
         Intent intent = getIntent();
         score = intent.getIntExtra("score", 0);
         totalQuestions = intent.getIntExtra("totalQuestions", 0);
 
         displayScore();
+
+        // Restart quiz
+        btn_playAgain.setOnClickListener(v -> {
+            startActivity(new Intent(Score.this, MainActivity.class));
+            finish();
+        });
+
+        // Logout user
+        btn_logout.setOnClickListener(v -> {
+            FirebaseAuth.getInstance().signOut();
+            startActivity(new Intent(Score.this, Login.class));
+            finish();
+        });
 
     }
     private void displayScore() {
