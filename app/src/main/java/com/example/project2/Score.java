@@ -8,9 +8,6 @@ import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -34,10 +31,7 @@ public class Score extends AppCompatActivity {
         btn_playAgain = findViewById(R.id.playAgain);
         btn_logout = findViewById(R.id.logout);
 
-        Intent intent = getIntent();
-        score = intent.getIntExtra("score", 0);
-        totalQuestions = intent.getIntExtra("totalQuestions", 0);
-
+        getIntentData();
         displayScore();
 
         // Restart quiz
@@ -53,6 +47,12 @@ public class Score extends AppCompatActivity {
             finish();
         });
 
+    }
+
+    private void getIntentData(){
+        Intent intent = getIntent();
+        score = intent.getIntExtra("score", 0);
+        totalQuestions = intent.getIntExtra("totalQuestions", 0);
     }
     private void displayScore() {
         int percentage = (score * 100) / totalQuestions;

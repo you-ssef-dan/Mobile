@@ -151,7 +151,7 @@ public class Questions extends AppCompatActivity {
     }
 
     private void navigateToScore() {
-        Intent intent = new Intent(this, Score.class);
+        Intent intent = new Intent(this, MapsActivity.class);
         intent.putExtra("score", score);  // Pass the score
         intent.putExtra("totalQuestions", totalQuestions);  // Pass the total number of questions
         startActivity(intent);
