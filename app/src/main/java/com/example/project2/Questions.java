@@ -3,7 +3,9 @@ package com.example.project2;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,12 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Questions extends AppCompatActivity {
-    TextView question, rep1, rep2, rep3;
+    TextView question, rep1, rep2, rep3,tv_time;
     FirebaseFirestore db;
-    int currentQuestionIndex = 0;
+    int currentQuestionIndex = 0, score,time = 10000;
     Button btnNext;
+    private CountDownTimer countDownTimer;
 
-    int score = 0;
+    ProgressBar progressBarTime;
+
 
     List<Quiz> quizzes = new ArrayList<>();
     @SuppressLint("MissingInflatedId")
@@ -38,8 +42,11 @@ public class Questions extends AppCompatActivity {
         question = findViewById(R.id.question);
         db = FirebaseFirestore.getInstance();
         btnNext = findViewById(R.id.btnNext);
+        progressBarTime = findViewById(R.id.progressBarTime);
+        tv_time = findViewById(R.id.tv_time);
 
         fetchQuizzesFromFirestore();
+        startCountdown();
 
         btnNext.setOnClickListener(v -> nextQuestion());
 
@@ -71,6 +78,7 @@ public class Questions extends AppCompatActivity {
             Toast.makeText(this, "No quizzes found", Toast.LENGTH_SHORT).show();
             return;
         }
+        startCountdown();
 
         List<Question> questionList = quizzes.get(0).questions;
 
@@ -107,6 +115,36 @@ public class Questions extends AppCompatActivity {
             Toast.makeText(this, "Wrong!" , Toast.LENGTH_SHORT).show();
         }
         nextQuestion(); // Move to the next question after checking the answer
+    }
+
+    private void startCountdown() {
+        // Cancel any existing timer if it exists
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+
+        // Countdown timer for 20 seconds (20,000 milliseconds)
+        countDownTimer = new CountDownTimer(time, 1000) { // 20000 ms = 20 seconds, 1000 ms = update interval
+            @SuppressLint("DefaultLocale")
+            @Override
+            public void onTick(long millisUntilFinished) {
+                // Calculate progress based on time left
+                int progress = (int) ((time - millisUntilFinished) * 100 / time);
+                progressBarTime.setProgress(progress);
+
+                // Update the time remaining
+                int secondsRemaining = (int) (millisUntilFinished / 1000);
+                int minutes = secondsRemaining / 60;
+                int seconds = secondsRemaining % 60;
+                tv_time.setText(String.format("%02d:%02d", minutes, seconds));
+            }
+
+            @Override
+            public void onFinish() {
+                // Call function when countdown is complete
+                nextQuestion();  // Move to the next question when the time is up
+            }
+        }.start();
     }
 
 
