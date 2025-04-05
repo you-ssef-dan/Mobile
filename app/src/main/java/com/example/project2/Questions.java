@@ -1,6 +1,7 @@
 package com.example.project2;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
@@ -83,6 +84,12 @@ public class Questions extends AppCompatActivity {
         } else {
             Toast.makeText(this, "You've reached the end of the quiz!", Toast.LENGTH_SHORT).show();
             btnNext.setEnabled(false); // Optional: disable button
+            Toast.makeText(this, "Your score is: " + score, Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(Questions.this, Score.class);
+            intent.putExtra("score", score);
+            intent.putExtra("totalQuestions", questionList.size());
+            startActivity(intent);
+            finish();
         }
     }
 
@@ -95,9 +102,9 @@ public class Questions extends AppCompatActivity {
         Question currentQuestion = quizzes.get(0).questions.get(currentQuestionIndex);
         if (selectedAnswer.equals(currentQuestion.getRepCorrect())) {
             score++;
-            Toast.makeText(this, "Correct!" + score, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Correct!" , Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Wrong!" + score, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Wrong!" , Toast.LENGTH_SHORT).show();
         }
         nextQuestion(); // Move to the next question after checking the answer
     }
