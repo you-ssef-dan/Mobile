@@ -1,6 +1,7 @@
 package com.example.project2;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -9,6 +10,8 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -21,6 +24,7 @@ import com.google.android.material.textview.MaterialTextView;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import android.Manifest;
 
 public class Login extends AppCompatActivity {
     TextInputEditText email, pass;
@@ -28,6 +32,7 @@ public class Login extends AppCompatActivity {
     private FirebaseAuth mAuth;
     ProgressBar progressBar;
     MaterialTextView register;
+
     @Override
     public void onStart() {
         super.onStart();
@@ -51,6 +56,7 @@ public class Login extends AppCompatActivity {
         register = findViewById(R.id.register);
         progressBar = findViewById(R.id.progress);
         login = findViewById(R.id.login);
+
 
         register.setOnClickListener(new View.OnClickListener() {
             @Override

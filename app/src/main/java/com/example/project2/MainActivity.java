@@ -1,7 +1,9 @@
 package com.example.project2;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -9,6 +11,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -98,6 +104,32 @@ public class MainActivity extends AppCompatActivity {
     FirebaseUser user;
     TextView infos;
     FirebaseFirestore db;
+
+    private static final int CAMERA_REQUEST_CODE = 101;
+    private static final String[] CAMERA_PERMISSION = new String[]{android.Manifest.permission.CAMERA};
+
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(
+                this,
+                CAMERA_PERMISSION,
+                CAMERA_REQUEST_CODE
+        );
+    }
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!hasCameraPermission()) {
+            requestPermission();
+        }
+    }
+
 
     @Override
     protected void onStart() {
