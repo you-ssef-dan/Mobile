@@ -54,9 +54,9 @@ class Quiz {
 }
 
 class Question {
-    String question;
-    List<String> reponses;
-    String repCorrect;
+    private String question;
+    private List<String> reponses;
+    private String repCorrect;
 
     public Question() {} // Firestore needs empty constructor
 

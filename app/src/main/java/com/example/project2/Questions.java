@@ -21,6 +21,8 @@ public class Questions extends AppCompatActivity {
     int currentQuestionIndex = 0;
     Button btnNext;
 
+    int score = 0;
+
     List<Quiz> quizzes = new ArrayList<>();
     @SuppressLint("MissingInflatedId")
     @Override
@@ -39,6 +41,10 @@ public class Questions extends AppCompatActivity {
         fetchQuizzesFromFirestore();
 
         btnNext.setOnClickListener(v -> nextQuestion());
+
+        rep1.setOnClickListener(v -> checkAnswer(rep1.getText().toString()));
+        rep2.setOnClickListener(v -> checkAnswer(rep2.getText().toString()));
+        rep3.setOnClickListener(v -> checkAnswer(rep3.getText().toString()));
     }
 
     private void fetchQuizzesFromFirestore() {
@@ -70,10 +76,10 @@ public class Questions extends AppCompatActivity {
         if (currentQuestionIndex < questionList.size()) {
             Question currentQuestion = questionList.get(currentQuestionIndex);
 
-            question.setText(currentQuestion.question);
-            rep1.setText(currentQuestion.reponses.get(0));
-            rep2.setText(currentQuestion.reponses.get(1));
-            rep3.setText(currentQuestion.reponses.get(2));
+            question.setText(currentQuestion.getQuestion());
+            rep1.setText(currentQuestion.getReponses().get(0));
+            rep2.setText(currentQuestion.getReponses().get(1));
+            rep3.setText(currentQuestion.getReponses().get(2));
         } else {
             Toast.makeText(this, "You've reached the end of the quiz!", Toast.LENGTH_SHORT).show();
             btnNext.setEnabled(false); // Optional: disable button
@@ -84,5 +90,17 @@ public class Questions extends AppCompatActivity {
         currentQuestionIndex++; // Initialize with the first question index
         displayQuizzes(quizzes);
     }
+
+    private void checkAnswer(String selectedAnswer) {
+        Question currentQuestion = quizzes.get(0).questions.get(currentQuestionIndex);
+        if (selectedAnswer.equals(currentQuestion.getRepCorrect())) {
+            score++;
+            Toast.makeText(this, "Correct!" + score, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Wrong!" + score, Toast.LENGTH_SHORT).show();
+        }
+        nextQuestion(); // Move to the next question after checking the answer
+    }
+
 
 }
