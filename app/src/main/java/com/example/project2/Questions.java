@@ -21,8 +21,8 @@ import java.util.List;
 public class Questions extends AppCompatActivity {
     TextView question, rep1, rep2, rep3,tv_time;
     FirebaseFirestore db;
-    int currentQuestionIndex = 0, score,time = 10000;
-    Button btnNext;
+    int totalQuestions = 0, currentQuestionIndex = 0, score,time = 10000;
+    Button btnNext, btnQuit;
     private CountDownTimer countDownTimer;
 
     ProgressBar progressBarTime;
@@ -44,15 +44,17 @@ public class Questions extends AppCompatActivity {
         btnNext = findViewById(R.id.btnNext);
         progressBarTime = findViewById(R.id.progressBarTime);
         tv_time = findViewById(R.id.tv_time);
-
-        fetchQuizzesFromFirestore();
-        startCountdown();
+        btnQuit = findViewById(R.id.btn_quit);
 
         btnNext.setOnClickListener(v -> nextQuestion());
+        btnQuit.setOnClickListener(v -> quitQuiz());
 
         rep1.setOnClickListener(v -> checkAnswer(rep1.getText().toString()));
         rep2.setOnClickListener(v -> checkAnswer(rep2.getText().toString()));
         rep3.setOnClickListener(v -> checkAnswer(rep3.getText().toString()));
+
+        fetchQuizzesFromFirestore();
+        startCountdown();
     }
 
     private void fetchQuizzesFromFirestore() {
@@ -64,6 +66,7 @@ public class Questions extends AppCompatActivity {
                             Quiz quiz = document.toObject(Quiz.class);
                             quizzes.add(quiz);
                         }
+                        totalQuestions = quizzes.get(0).questions.size();
                         // Now you have all quizzes, do something with them
                         Toast.makeText(Questions.this, "Quizzes fetched successfully!", Toast.LENGTH_SHORT).show();
                         displayQuizzes(quizzes);
@@ -93,11 +96,7 @@ public class Questions extends AppCompatActivity {
             Toast.makeText(this, "You've reached the end of the quiz!", Toast.LENGTH_SHORT).show();
             btnNext.setEnabled(false); // Optional: disable button
             Toast.makeText(this, "Your score is: " + score, Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(Questions.this, Score.class);
-            intent.putExtra("score", score);
-            intent.putExtra("totalQuestions", questionList.size());
-            startActivity(intent);
-            finish();
+            navigateToScore();
         }
     }
 
@@ -145,6 +144,26 @@ public class Questions extends AppCompatActivity {
                 nextQuestion();  // Move to the next question when the time is up
             }
         }.start();
+    }
+
+    private void quitQuiz() {
+        navigateToScore();
+    }
+
+    private void navigateToScore() {
+        Intent intent = new Intent(this, Score.class);
+        intent.putExtra("score", score);  // Pass the score
+        intent.putExtra("totalQuestions", totalQuestions);  // Pass the total number of questions
+        startActivity(intent);
+        finish();  // Close MainActivity // Close MainActivity so the user can't go back to it
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (countDownTimer != null) {
+            countDownTimer.cancel();  // Cancel the countdown when activity is destroyed
+        }
+        super.onDestroy();
     }
 
 
