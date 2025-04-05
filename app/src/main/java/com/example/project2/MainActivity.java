@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
@@ -35,7 +36,21 @@ class Quiz {
         this.questions = questions;
     }
 
-    // Getters and setters...
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
+    }
 }
 
 class Question {
@@ -51,15 +66,49 @@ class Question {
         this.repCorrect = repCorrect;
     }
 
-    // Getters and setters...
+    public String getQuestion() {
+        return question;
+    }
+
+    public void setQuestion(String question) {
+        this.question = question;
+    }
+
+    public List<String> getReponses() {
+        return reponses;
+    }
+
+    public void setReponses(List<String> reponses) {
+        this.reponses = reponses;
+    }
+
+    public String getRepCorrect() {
+        return repCorrect;
+    }
+
+    public void setRepCorrect(String repCorrect) {
+        this.repCorrect = repCorrect;
+    }
 }
 
 public class MainActivity extends AppCompatActivity {
 
-    MaterialButton logout;
+    MaterialButton logout, start;
     FirebaseAuth auth;
     FirebaseUser user;
     TextView infos;
+    FirebaseFirestore db;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (user == null) {
+            startActivity(new Intent(getApplicationContext(), Login.class));
+            finish();
+        } else {
+            infos.setText(user.getEmail());
+        }
+    }
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -71,14 +120,12 @@ public class MainActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         user = auth.getCurrentUser();
         infos = findViewById(R.id.text);
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db = FirebaseFirestore.getInstance();
+        start = findViewById(R.id.action_button);
 
-        if (user == null) {
-            startActivity(new Intent(getApplicationContext(), Login.class));
-            finish();
-        } else {
-            infos.setText(user.getEmail());
-        }
+
+        //fetchQuizzesFromFirestore();
+
 
         logout.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
@@ -86,6 +133,14 @@ public class MainActivity extends AppCompatActivity {
             finish();
         });
 
+        start.setOnClickListener(v -> {
+            startActivity(new Intent(getApplicationContext(), Questions.class));
+            finish();
+        });
+
+    }
+
+    private void addQuizToFirestore() {
         // Create quiz and questions
         String quizName = "Quiz1";
         List<Question> questions = new ArrayList<>();
@@ -131,4 +186,5 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
+
 }
