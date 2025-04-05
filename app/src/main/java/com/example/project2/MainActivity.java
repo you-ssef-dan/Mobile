@@ -9,27 +9,35 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.Camera;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.LifecycleOwner;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+
+
 
 class Quiz {
     String name;
@@ -58,7 +66,6 @@ class Quiz {
         this.questions = questions;
     }
 }
-
 class Question {
     private String question;
     private List<String> reponses;
@@ -97,39 +104,95 @@ class Question {
     }
 }
 
-public class MainActivity extends AppCompatActivity {
 
-    MaterialButton logout, start;
+public class MainActivity extends AppCompatActivity {
+    private static final int PERMISSION_CAMERA = 1;
+    private PreviewView previewView;
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
+
+    MaterialButton logout, start, enableCamera;
     FirebaseAuth auth;
     FirebaseUser user;
     TextView infos;
     FirebaseFirestore db;
 
-    private static final int CAMERA_REQUEST_CODE = 101;
-    private static final String[] CAMERA_PERMISSION = new String[]{android.Manifest.permission.CAMERA};
+    @SuppressLint("MissingInflatedId")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        setContentView(R.layout.activity_main);
 
-    private void requestPermission() {
-        ActivityCompat.requestPermissions(
-                this,
-                CAMERA_PERMISSION,
-                CAMERA_REQUEST_CODE
-        );
+        // Initialize views
+        logout = findViewById(R.id.quit);
+        start = findViewById(R.id.action_button);
+        enableCamera = findViewById(R.id.enableCamera);
+        previewView = findViewById(R.id.previewView);
+        infos = findViewById(R.id.text);
+
+        auth = FirebaseAuth.getInstance();
+        user = auth.getCurrentUser();
+        db = FirebaseFirestore.getInstance();
+
+        // Apply edge insets
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
+
+        enableCamera.setOnClickListener(v -> {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CAMERA);
+            }
+        });
+
+        logout.setOnClickListener(v -> {
+            FirebaseAuth.getInstance().signOut();
+            startActivity(new Intent(getApplicationContext(), Login.class));
+            finish();
+        });
+
+        start.setOnClickListener(v -> {
+            startActivity(new Intent(getApplicationContext(), Questions.class));
+            finish();
+        });
     }
-    private boolean hasCameraPermission() {
-        return ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED;
+
+    private void startCamera() {
+        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                bindPreview(cameraProvider);
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void bindPreview(@NonNull ProcessCameraProvider cameraProvider) {
+        Preview preview = new Preview.Builder().build();
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build();
+        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview);
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (!hasCameraPermission()) {
-            requestPermission();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_CAMERA && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
+            startCamera();
+        } else {
+            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
     }
-
 
     @Override
     protected void onStart() {
@@ -142,38 +205,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("MissingInflatedId")
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        logout = findViewById(R.id.quit);
-        auth = FirebaseAuth.getInstance();
-        user = auth.getCurrentUser();
-        infos = findViewById(R.id.text);
-        db = FirebaseFirestore.getInstance();
-        start = findViewById(R.id.action_button);
-
-
-        //fetchQuizzesFromFirestore();
-
-
-        logout.setOnClickListener(v -> {
-            FirebaseAuth.getInstance().signOut();
-            startActivity(new Intent(getApplicationContext(), Login.class));
-            finish();
-        });
-
-        start.setOnClickListener(v -> {
-            startActivity(new Intent(getApplicationContext(), Questions.class));
-            finish();
-        });
-
-    }
-
     private void addQuizToFirestore() {
-        // Create quiz and questions
         String quizName = "Quiz1";
         List<Question> questions = new ArrayList<>();
         questions.add(new Question("1 - 1 = ?", List.of("1", "0", "3"), "0"));
@@ -184,39 +216,20 @@ public class MainActivity extends AppCompatActivity {
 
         Quiz quiz = new Quiz(quizName, questions);
 
-        // First check if quiz with same name already exists
         db.collection("quiz")
                 .whereEqualTo("name", quizName)
                 .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-                        if (task.isSuccessful()) {
-                            if (task.getResult().isEmpty()) {
-                                // Quiz does not exist, add it
-                                db.collection("quiz")
-                                        .add(quiz)
-                                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                            @Override
-                                            public void onSuccess(DocumentReference documentReference) {
-                                                Toast.makeText(MainActivity.this, "Quiz uploaded!", Toast.LENGTH_SHORT).show();
-                                            }
-                                        })
-                                        .addOnFailureListener(new OnFailureListener() {
-                                            @Override
-                                            public void onFailure(@NonNull Exception e) {
-                                                Toast.makeText(MainActivity.this, "Upload failed", Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                            } else {
-                                // Quiz already exists
-                                Toast.makeText(MainActivity.this, "Quiz already exists!", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Toast.makeText(MainActivity.this, "Failed to check quiz", Toast.LENGTH_SHORT).show();
-                        }
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult().isEmpty()) {
+                        db.collection("quiz")
+                                .add(quiz)
+                                .addOnSuccessListener(documentReference ->
+                                        Toast.makeText(MainActivity.this, "Quiz uploaded!", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(MainActivity.this, "Upload failed", Toast.LENGTH_SHORT).show());
+                    } else {
+                        Toast.makeText(MainActivity.this, "Quiz already exists or failed to check", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
-
 }
