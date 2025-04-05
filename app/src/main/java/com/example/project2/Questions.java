@@ -2,14 +2,12 @@ package com.example.project2;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -20,7 +18,10 @@ import java.util.List;
 public class Questions extends AppCompatActivity {
     TextView question, rep1, rep2, rep3;
     FirebaseFirestore db;
+    int currentQuestionIndex = 0;
+    Button btnNext;
 
+    List<Quiz> quizzes = new ArrayList<>();
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,8 +34,11 @@ public class Questions extends AppCompatActivity {
         rep3 = findViewById(R.id.rep3);
         question = findViewById(R.id.question);
         db = FirebaseFirestore.getInstance();
+        btnNext = findViewById(R.id.btnNext);
 
         fetchQuizzesFromFirestore();
+
+        btnNext.setOnClickListener(v -> nextQuestion());
     }
 
     private void fetchQuizzesFromFirestore() {
@@ -42,7 +46,6 @@ public class Questions extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        List<Quiz> quizzes = new ArrayList<>();
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Quiz quiz = document.toObject(Quiz.class);
                             quizzes.add(quiz);
@@ -62,13 +65,24 @@ public class Questions extends AppCompatActivity {
             return;
         }
 
-        Question firstQuestion = quizzes.get(0).questions.get(0);
+        List<Question> questionList = quizzes.get(0).questions;
 
-        question.setText(firstQuestion.question);
-        rep1.setText(firstQuestion.reponses.get(0));
-        rep2.setText(firstQuestion.reponses.get(1));
-        rep3.setText(firstQuestion.reponses.get(2));
+        if (currentQuestionIndex < questionList.size()) {
+            Question currentQuestion = questionList.get(currentQuestionIndex);
+
+            question.setText(currentQuestion.question);
+            rep1.setText(currentQuestion.reponses.get(0));
+            rep2.setText(currentQuestion.reponses.get(1));
+            rep3.setText(currentQuestion.reponses.get(2));
+        } else {
+            Toast.makeText(this, "You've reached the end of the quiz!", Toast.LENGTH_SHORT).show();
+            btnNext.setEnabled(false); // Optional: disable button
+        }
     }
 
+    private void nextQuestion() {
+        currentQuestionIndex++; // Initialize with the first question index
+        displayQuizzes(quizzes);
+    }
 
 }
