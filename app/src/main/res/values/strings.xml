@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">project2</string>
+    <string name="app_name">StudyPal</string>
     <string name="welcome_message">Welcome to Study Pal</string>
     <string name="title_activity_maps">MapsActivity</string>
 </resources>

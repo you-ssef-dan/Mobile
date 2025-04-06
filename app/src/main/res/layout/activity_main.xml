@@ -53,6 +53,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Do Something"
+        android:backgroundTint="@color/blue"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/text"
         app:layout_constraintStart_toStartOf="parent"
@@ -67,19 +68,47 @@
         app:layout_constraintTop_toBottomOf="@id/action_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/enableCamera"
+        app:layout_constraintBottom_toTopOf="@id/cameraButtonLayout"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="8dp"/>
 
-    <!-- Open Camera Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/enableCamera"
+    <!-- Buttons for Camera Activation and Switching -->
+    <LinearLayout
+        android:id="@+id/cameraButtonLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Open Camera"
+        android:orientation="horizontal"
+        android:gravity="center"
         android:layout_marginBottom="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Open Camera Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/enableCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/baseline_camera_alt_24"
+            app:iconSize="25dp"
+            android:text="Camera"
+            app:iconGravity="textStart"
+            android:backgroundTint="@color/blue"
+            android:layout_marginEnd="16dp" />
+
+        <!-- Switch Camera Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/switchCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:iconSize="25dp"
+            android:text="switch"
+            app:icon="@drawable/baseline_cameraswitch_24"
+            app:iconGravity="textStart"
+            android:backgroundTint="@color/blue"
+            android:layout_marginStart="16dp" />
+
+    </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

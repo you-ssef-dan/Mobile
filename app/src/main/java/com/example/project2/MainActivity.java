@@ -110,11 +110,12 @@ public class MainActivity extends AppCompatActivity {
     private PreviewView previewView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
-    MaterialButton logout, start, enableCamera;
+    MaterialButton logout, start, enableCamera, switchCamera;
     FirebaseAuth auth;
     FirebaseUser user;
     TextView infos;
     FirebaseFirestore db;
+    private boolean isBackCamera = true; // To keep track of which camera is currently active
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -129,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
         enableCamera = findViewById(R.id.enableCamera);
         previewView = findViewById(R.id.previewView);
         infos = findViewById(R.id.text);
+        switchCamera = findViewById(R.id.switchCamera);
 
         auth = FirebaseAuth.getInstance();
         user = auth.getCurrentUser();
@@ -143,10 +145,15 @@ public class MainActivity extends AppCompatActivity {
 
         enableCamera.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                startCamera();
+                startCamera(isBackCamera);
             } else {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CAMERA);
             }
+        });
+
+        switchCamera.setOnClickListener(v -> {
+            isBackCamera = !isBackCamera; // Toggle camera
+            startCamera(isBackCamera);
         });
 
         logout.setOnClickListener(v -> {
@@ -161,22 +168,27 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void startCamera() {
+    private void startCamera(boolean useBackCamera) {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                bindPreview(cameraProvider);
+
+                // Unbind all use cases before rebinding
+                cameraProvider.unbindAll();
+
+                bindPreview(cameraProvider, useBackCamera);
             } catch (ExecutionException | InterruptedException e) {
                 e.printStackTrace();
             }
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void bindPreview(@NonNull ProcessCameraProvider cameraProvider) {
+
+    private void bindPreview(@NonNull ProcessCameraProvider cameraProvider, boolean useBackCamera) {
         Preview preview = new Preview.Builder().build();
         CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .requireLensFacing(useBackCamera ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
                 .build();
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
         Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview);
@@ -188,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_CAMERA && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
-            startCamera();
+            startCamera(isBackCamera);
         } else {
             Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
