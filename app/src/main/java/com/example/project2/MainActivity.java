@@ -2,20 +2,25 @@ package com.example.project2;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -23,21 +28,15 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-
-
 
 class Quiz {
     String name;
@@ -54,24 +53,17 @@ class Quiz {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public List<Question> getQuestions() {
         return questions;
     }
-
-    public void setQuestions(List<Question> questions) {
-        this.questions = questions;
-    }
 }
+
 class Question {
     private String question;
     private List<String> reponses;
     private String repCorrect;
 
-    public Question() {} // Firestore needs empty constructor
+    public Question() {}
 
     public Question(String question, List<String> reponses, String repCorrect) {
         this.question = question;
@@ -83,39 +75,30 @@ class Question {
         return question;
     }
 
-    public void setQuestion(String question) {
-        this.question = question;
-    }
-
     public List<String> getReponses() {
         return reponses;
-    }
-
-    public void setReponses(List<String> reponses) {
-        this.reponses = reponses;
     }
 
     public String getRepCorrect() {
         return repCorrect;
     }
-
-    public void setRepCorrect(String repCorrect) {
-        this.repCorrect = repCorrect;
-    }
 }
 
-
 public class MainActivity extends AppCompatActivity {
+
     private static final int PERMISSION_CAMERA = 1;
+    private static final int PERMISSION_LOCATION = 2;
+    private static final int PERMISSION_ALL = 100;
+
+    private boolean isBackCamera = true; // To keep track
     private PreviewView previewView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
-    MaterialButton logout, start, enableCamera, switchCamera;
+    MaterialButton logout, start, enableCamera,switchCamera;
     FirebaseAuth auth;
     FirebaseUser user;
     TextView infos;
     FirebaseFirestore db;
-    private boolean isBackCamera = true; // To keep track of which camera is currently active
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -124,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Initialize views
         logout = findViewById(R.id.quit);
         start = findViewById(R.id.action_button);
         enableCamera = findViewById(R.id.enableCamera);
@@ -136,7 +118,6 @@ public class MainActivity extends AppCompatActivity {
         user = auth.getCurrentUser();
         db = FirebaseFirestore.getInstance();
 
-        // Apply edge insets
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -163,9 +144,37 @@ public class MainActivity extends AppCompatActivity {
         });
 
         start.setOnClickListener(v -> {
+            List<String> permissionsToRequest = new ArrayList<>();
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            }
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.CAMERA);
+            }
+
+            if (!permissionsToRequest.isEmpty()) {
+                ActivityCompat.requestPermissions(this, permissionsToRequest.toArray(new String[0]), PERMISSION_ALL);
+            } else {
+                proceedIfPermissionsGranted();
+            }
+        });
+    }
+
+    private void checkAndRequestGPS() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        if (!isGPSEnabled) {
+            Toast.makeText(this, "Please enable GPS to continue", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "GPS is already enabled", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(getApplicationContext(), Questions.class));
             finish();
-        });
+        }
     }
 
     private void startCamera(boolean useBackCamera) {
@@ -198,12 +207,71 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_CAMERA && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
-            startCamera(isBackCamera);
-        } else {
-            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+
+        if (requestCode == PERMISSION_ALL) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+
+            if (allGranted) {
+                proceedIfPermissionsGranted();
+            } else {
+                for (int i = 0; i < permissions.length; i++) {
+                    if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                        String permission = permissions[i];
+                        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                            showPermissionRationale(permission, PERMISSION_ALL,
+                                    permission.equals(Manifest.permission.CAMERA)
+                                            ? "Camera access is required to use this feature."
+                                            : "Location is needed to start the quiz.");
+                        } else {
+                            Toast.makeText(this, permission + " permission denied permanently. Enable it from settings.", Toast.LENGTH_LONG).show();
+                            openAppSettings();
+                        }
+                    }
+                }
+            }
         }
+
+        if (requestCode == PERMISSION_CAMERA) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show();
+                startCamera(isBackCamera);
+            } else {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+                    showPermissionRationale(Manifest.permission.CAMERA, PERMISSION_CAMERA, "Camera access is required to use this feature.");
+                } else {
+                    Toast.makeText(this, "Camera permission denied permanently. Enable it from settings.", Toast.LENGTH_LONG).show();
+                    openAppSettings();
+                }
+            }
+        }
+    }
+
+    private void proceedIfPermissionsGranted() {
+        checkAndRequestGPS();
+        startCamera(isBackCamera);
+    }
+
+    private void showPermissionRationale(String permission, int requestCode, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle("Permission Required")
+                .setMessage(message)
+                .setPositiveButton("Grant", (dialog, which) ->
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void openAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        startActivity(intent);
     }
 
     @Override
