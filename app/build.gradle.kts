@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.play.services.maps)
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

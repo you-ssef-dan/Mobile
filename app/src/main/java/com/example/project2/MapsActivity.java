@@ -1,30 +1,48 @@
 package com.example.project2;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.example.project2.databinding.ActivityMapsBinding;
 import com.google.firebase.auth.FirebaseAuth;
+import com.example.project2.databinding.ActivityMapsBinding;
+
+import java.io.IOException;
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     TextView tvScore, tvCorrect, tvWrong, tvGreating;
-    int score,totalQuestions;
+    int score, totalQuestions;
 
     Button btn_playAgain, btn_logout;
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,39 +57,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btn_playAgain = findViewById(R.id.playAgain);
         btn_logout = findViewById(R.id.logout);
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
         mapFragment.getMapAsync(this);
-        getIntentData();
 
         getIntentData();
         displayScore();
 
-
-        // Restart quiz
         btn_playAgain.setOnClickListener(v -> {
             startActivity(new Intent(MapsActivity.this, MainActivity.class));
             finish();
         });
 
-        // Logout user
         btn_logout.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
             startActivity(new Intent(MapsActivity.this, Login.class));
             finish();
         });
-
     }
-    private void getIntentData(){
+
+    private void getIntentData() {
         Intent intent = getIntent();
         score = intent.getIntExtra("score", 0);
         totalQuestions = intent.getIntExtra("totalQuestions", 0);
     }
+
     private void displayScore() {
         int percentage = (score * 100) / totalQuestions;
-        tvScore.setText(String.valueOf(percentage + "%"));
+        tvScore.setText(percentage + "%");
         tvCorrect.setText(String.valueOf(score));
         tvWrong.setText(String.valueOf(totalQuestions - score));
 
@@ -84,22 +100,71 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng CasaBlanca = new LatLng(33.5736, -7.5898);
-        mMap.addMarker(new MarkerOptions().position(CasaBlanca).title("CasaBlanca"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(CasaBlanca,10));
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mMap.setMyLocationEnabled(true);
+            getCurrentLocation();
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    private void getCurrentLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    if (location != null) {
+                        LatLng current = new LatLng(location.getLatitude(), location.getLongitude());
+                        mMap.addMarker(new MarkerOptions().position(current).title("You are here"));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(current, 15));
+
+                        // Use Geocoder to get city name
+                        Geocoder geocoder = new Geocoder(this);
+                        try {
+                            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                            if (addresses != null && !addresses.isEmpty()) {
+                                String city = addresses.get(0).getLocality();
+                                Toast.makeText(this, "City: " + city, Toast.LENGTH_LONG).show();
+                            } else {
+                                Toast.makeText(this, "City not found", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Toast.makeText(this, "Geocoder error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(this, "Unable to get current location", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    mMap.setMyLocationEnabled(true);
+                    getCurrentLocation();
+                }
+            } else {
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
