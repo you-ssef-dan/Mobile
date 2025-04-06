@@ -50,6 +50,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.play.services.location.v2101)
+
 
 
     implementation("androidx.camera:camera-camera2:1.2.3")
